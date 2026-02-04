@@ -1,5 +1,5 @@
 import pygame
-from settings import *
+from core.settings import *
 
 class CameraGroup(pygame.sprite.Group):
     def __init__(self):
@@ -16,7 +16,7 @@ class CameraGroup(pygame.sprite.Group):
     def set_tiled_background(self, image_path, map_width, map_height):
         # Charger l'image de texture
         try:
-            from asset_manager import AssetManager
+            from core.asset_manager import AssetManager
             assets = AssetManager()
             # On essaye de charger par nom si asset manager le permet, sinon path direct
             if "/" in image_path or "\\" in image_path:
@@ -43,6 +43,10 @@ class CameraGroup(pygame.sprite.Group):
             self.floor_surf = pygame.Surface((map_width, map_height))
             self.floor_surf.fill((20, 0, 20)) # Fail safe purple
             self.floor_rect = self.floor_surf.get_rect()
+
+    def set_background_surface(self, surface):
+        self.floor_surf = surface
+        self.floor_rect = self.floor_surf.get_rect(topleft=(0, 0))
 
     def custom_draw(self, player):
         # Center camera on player

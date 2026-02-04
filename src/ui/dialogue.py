@@ -1,5 +1,5 @@
 import pygame
-from settings import *
+from core.settings import *
 
 class DialogueManager:
     """Gestionnaire centralisé de l'interface de dialogue."""
@@ -39,6 +39,9 @@ class DialogueManager:
             # Continuer / Fermer
             elif event.key in [pygame.K_SPACE, pygame.K_RETURN, pygame.K_e, pygame.K_ESCAPE]:
                 self.active = False
+                # Trigger callback if it exists and we are just closing text (no options)
+                if not self.current_dialogue["options"] and self.on_option_select:
+                     self.on_option_select(None)
                 self.current_dialogue = None
                 return True
 

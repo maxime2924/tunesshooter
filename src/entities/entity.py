@@ -1,8 +1,8 @@
 import pygame
 import math
 import os
-from asset_manager import AssetManager
-from settings import *
+from core.asset_manager import AssetManager
+from core.settings import *
 
 class Entity(pygame.sprite.Sprite):
     def __init__(self, groups, image=None, pos=(0,0), scale=None):

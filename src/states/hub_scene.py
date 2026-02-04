@@ -1,43 +1,43 @@
-import pygame
-from settings import *
-from scenes import Scene
-from dialogue import DialogueManager
-from shop_system import Merchant, ShopItem
-from asset_manager import AssetManager
-from camera import CameraGroup
-from base import Entity, Pyramid, AnimatedEntity # Keep entities in base.py for now to avoid circular imports? actually we should move them.
+from core.settings import *
+from states.scenes import Scene
+from ui.dialogue import DialogueManager
+from core.shop_system import Merchant, ShopItem
+from core.asset_manager import AssetManager
+from core.camera import CameraGroup
+# from base import Entity, Pyramid, AnimatedEntity # Removed, using entities
+from entities.entity import Entity, AnimatedEntity
 # For now we assume base.py still has Entity/Pyramid classes but we are rewriting BaseZone -> HubScene
 
 class HubScene(Scene):
     def __init__(self, manager):
         super().__init__(manager)
-        self.width, self.height = MAP_WIDTH, MAP_HEIGHT
+        self.width, self.height = HUB_WIDTH, HUB_HEIGHT
         self.assets = AssetManager()
         
         # Shared Player
         self.player = self.manager.shared_data.get('player')
         if not self.player:
-            # Create player if not exists (should be done in manager usually, but fallback here)
-            from player import Player
-            self.player = Player(pygame.Rect(0, 0, MAP_WIDTH, MAP_HEIGHT))
+            from entities.player import Player
+            self.player = Player(pygame.Rect(0, 0, HUB_WIDTH, HUB_HEIGHT))
             self.manager.shared_data['player'] = self.player
 
         # Camera & Groups
         self.camera_group = CameraGroup()
-        self.camera_group.set_tiled_background("grass.png", MAP_WIDTH, MAP_HEIGHT)
+        self.camera_group.set_tiled_background("grass.png", self.width, self.height)
         
         self.interactables = pygame.sprite.Group()
         self.collision_sprites = pygame.sprite.Group() 
         self.npcs = pygame.sprite.Group()
 
         # Add Player
-        self.player.groups_list = [self.camera_group] # Helper to track groups?
+        self.player.groups_list = [self.camera_group] 
         self.camera_group.add(self.player)
         
         # Dialogue
         self.dialogue_mgr = DialogueManager(self.assets.get_font(None, 24))
         
         self._setup_world()
+        self._setup_decor()
         self._setup_merchants()
         self._setup_npcs()
 
@@ -48,62 +48,76 @@ class HubScene(Scene):
         self.unlocked_missions = self.manager.shared_data.get("unlocked_missions", ["Extraction Illimitée"])
 
     def on_enter(self, **kwargs):
-        # Reset position if coming from somewhere specific
-        spawn_point = kwargs.get('spawn_pos', (MAP_WIDTH//2, MAP_HEIGHT//2 + 500))
+        spawn_point = kwargs.get('spawn_pos', (self.width//2, self.height//2 + 500))
         self.player.rect.center = spawn_point
-        # Re-add player to this scene's camera group just in case
         if self.player not in self.camera_group:
             self.camera_group.add(self.player)
 
     def _setup_world(self):
-        # Pyramide logic (simplified)
         pyramid_img = self.assets.get_image("pyramid.png")
         if pyramid_img:
-            new_size = (300, 200)
-            px = MAP_WIDTH // 2 - new_size[0] // 2
-            py = MAP_HEIGHT // 2 - new_size[1] // 2
-            self.pyramid = Pyramid([self.camera_group, self.collision_sprites], image=pyramid_img, pos=(px, py), scale=new_size)
-            # Hitbox plus petite au centre
-            self.pyramid.hitbox = pygame.Rect(px + 40, py + 80, new_size[0] - 80, new_size[1] - 80)
+            # Centre
+            px, py = self.width // 2 - 150, self.height // 2 - 100
+            self.pyramid = Pyramid([self.camera_group, self.collision_sprites], image=pyramid_img, pos=(px, py), scale=(300, 200))
+            self.pyramid.hitbox = pygame.Rect(px + 40, py + 80, 220, 120)
             
             # DJ
-            dj_x = px + new_size[0] // 2 - 20
-            dj_y = py + new_size[1] // 3 
-            self.dj = AnimatedEntity([self.camera_group], "daft_dj.png", pos=(dj_x, dj_y), scale=(40, 40))
+            self.dj = AnimatedEntity([self.camera_group], "daft_dj.png", pos=(px + 130, py + 60), scale=(40, 40))
             
-            self.mission_rect = pygame.Rect(px + new_size[0]//2 - 60, py + new_size[1] + 10, 120, 60)
+            self.mission_rect = pygame.Rect(px + 90, py + 210, 120, 60)
         else:
-            self.mission_rect = pygame.Rect(MAP_WIDTH//2 - 50, MAP_HEIGHT//2 - 50, 100, 100)
-            
-        self.backstage_rect = pygame.Rect(MAP_WIDTH // 2 - 100, MAP_HEIGHT // 2 - 850, 200, 100)
+            self.mission_rect = pygame.Rect(self.width//2 - 50, self.height//2 - 50, 100, 100)
+
+    def _setup_decor(self):
+        # Ajout d'obstacles décoratifs "physiques"
+        import random
+        from entities.walls import Obstacle
+        
+        # Quelques blocs autour du centre pour donner de la vie
+        cx, cy = self.width // 2, self.height // 2
+        
+        decor_positions = [
+            (cx - 400, cy - 200), (cx + 400, cy - 200),
+            (cx - 400, cy + 300), (cx + 400, cy + 300),
+            (cx - 600, cy), (cx + 600, cy)
+        ]
+        
+        for x, y in decor_positions:
+            # Variance
+            x += random.randint(-50, 50)
+            y += random.randint(-50, 50)
+            Obstacle([self.camera_group, self.collision_sprites], (x, y), (60, 60), color=(40, 40, 50))
 
     def _setup_merchants(self):
         self.merchants_data = [] 
-        # Helpers
-        def add(img_name, pos, name, text, type_filter):
+        def add(img_name, pos, name, text, type_filter, action="shop"):
             img = self.assets.get_image(img_name)
-            sprite = Entity([self.camera_group, self.interactables, self.collision_sprites], image=img, pos=pos, scale=(200, 200))
-            # Set explicit small hitbox for collision at bottom
-            sprite.hitbox = pygame.Rect(pos[0] + 50, pos[1] + 150, 100, 50)
+            sprite = Entity([self.camera_group, self.interactables, self.collision_sprites], image=img, pos=pos, scale=(150, 150))
+            sprite.hitbox = pygame.Rect(pos[0] + 20, pos[1] + 100, 110, 50)
             
-            m_obj = Merchant()
-            # Filter
-            m_obj.items = [item for item in m_obj.items if item.effect_type == type_filter or type_filter == "all"]
-            if not m_obj.items:
-                 m_obj.items = [ShopItem(f"Module {type_filter}", 100, 1, type_filter, 1, "Upgrade standard")]
-            self.merchants_data.append({"sprite": sprite, "obj": m_obj, "name": name, "dialogue": text})
+            if action == "shop":
+                m_obj = Merchant()
+                m_obj.items = [item for item in m_obj.items if item.effect_type == type_filter or type_filter == "all"]
+                if not m_obj.items:
+                     m_obj.items = [ShopItem(f"Module {type_filter}", 100, 1, type_filter, 1, "Upgrade standard")]
+                self.merchants_data.append({"sprite": sprite, "obj": m_obj, "name": name, "dialogue": text, "action": "shop"})
+            elif action == "travel":
+                 self.merchants_data.append({"sprite": sprite, "obj": None, "name": name, "dialogue": text, "action": "travel"})
 
-        add("merchant_stand.png", (MAP_WIDTH//2 - 800, MAP_HEIGHT//2), "Armurier Cyber", "Le son, c'est l'arme ultime.", "damage")
-        add("merchant_base_upgrade.png", (MAP_WIDTH//2 + 800, MAP_HEIGHT//2), "Ingénieur Système", "Optimise tes circuits.", "hp")
-        add("merchant_vehicle_garage.png", (MAP_WIDTH//2 - 600, MAP_HEIGHT//2 + 800), "Garagiste", "Ta mobylette est naze.", "speed")
-        add("merchant_stand.png", (MAP_WIDTH//2 + 600, MAP_HEIGHT//2 + 800), "Fixer Info", "Infos sur cibles prioritaires.", "passive_gold")
+        # Redimensionnement des positions pour 2000px
+        cx, cy = self.width // 2, self.height // 2
+        
+        # Ecartement un peu plus grand
+        add("merchant_stand.png", (cx - 400, cy), "Armurier", "Le son est une arme.", "damage")
+        add("merchant_base_upgrade.png", (cx + 250, cy), "Ingénieur", "Garde le rythme.", "hp")
+        add("merchant_vehicle_garage.png", (cx - 300, cy + 400), "Garagiste", "Répare ta bécane.", "speed")
+        add("merchant_stand.png", (cx + 300, cy + 400), "Passeur", "Tu veux voir l'envers du décor ?", "none", action="travel")
+
 
     def _setup_npcs(self):
         self.lore_npcs = []
         npc_data = [
-            ("L'Ancien", "J'ai vu le premier concert... C'était légendaire.", (MAP_WIDTH//2 - 200, MAP_HEIGHT//2 - 600)),
-            ("Rescapée", "Ils ont pris mon frère. Il faut nettoyer la Zone 4.", (MAP_WIDTH//2 + 200, MAP_HEIGHT//2 - 600)),
-            ("Fan Hardcore", "Si tu trouves un vinyle original, je te le rachete !", (MAP_WIDTH//2, MAP_HEIGHT//2 - 700))
+            ("L'Ancien", "Tout a changé depuis le Silence.", (MAP_WIDTH//2 - 100, MAP_HEIGHT//2 - 200)),
         ]
         img = self.assets.get_image("punk_npc.png")
         for name, txt, pos in npc_data:
@@ -112,7 +126,6 @@ class HubScene(Scene):
 
     def update(self):
         self.camera_group.update()
-        
         if self._is_ui_open(): return
 
         # Movement
@@ -126,20 +139,25 @@ class HubScene(Scene):
         
         if dx != 0 and dy != 0: dx, dy = dx*0.707, dy*0.707
 
-        # Collisions
+        # Collisions & Movement
         self.player.rect.x += dx
+        # Collision X
         for sprite in self.collision_sprites:
             if hasattr(sprite, 'hitbox') and self.player.rect.colliderect(sprite.hitbox):
+                 from entities.entity import separate_sprites
+                 separate_sprites(self.player, sprite, True, False) # Using separate_sprites helper
+                 # Ou manuellement si separate_sprites ne gère pas hitbox vs rect
                  if dx > 0: self.player.rect.right = sprite.hitbox.left
                  if dx < 0: self.player.rect.left = sprite.hitbox.right
         
         self.player.rect.y += dy
+        # Collision Y
         for sprite in self.collision_sprites:
-            if hasattr(sprite, 'hitbox') and self.player.rect.colliderect(sprite.hitbox):
+             if hasattr(sprite, 'hitbox') and self.player.rect.colliderect(sprite.hitbox):
                    if dy > 0: self.player.rect.bottom = sprite.hitbox.top
                    if dy < 0: self.player.rect.top = sprite.hitbox.bottom
         
-        self.player.rect.clamp_ip(pygame.Rect(0, 0, MAP_WIDTH, MAP_HEIGHT))
+        self.player.rect.clamp_ip(pygame.Rect(0, 0, self.width, self.height))
 
     def handle_input(self, events):
         # Dialogue
@@ -171,20 +189,21 @@ class HubScene(Scene):
         # Merchants
         for m in self.merchants_data:
             if self.player.rect.colliderect(m["sprite"].hitbox.inflate(100, 100)):
-                self.active_merchant = m["obj"]
-                self.dialogue_mgr.start_dialogue(m["name"], m["dialogue"], 
-                    options=[("Ouvrir Magasin", "shop"), ("Au revoir", "bye")],
-                    callback=self._on_merchant_dialogue)
+                if m["action"] == "travel":
+                     self.dialogue_mgr.start_dialogue(m["name"], m["dialogue"], 
+                        options=[("Aller au Backstage", "go_backstage"), ("Rester ici", "stay")],
+                        callback=self._on_travel_dialogue)
+                else:
+                    self.active_merchant = m["obj"]
+                    self.dialogue_mgr.start_dialogue(m["name"], m["dialogue"], 
+                        options=[("Ouvrir Magasin", "shop"), ("Au revoir", "bye")],
+                        callback=self._on_merchant_dialogue)
                 return
         
         # NPCs
         for npc in self.lore_npcs:
             if self.player.rect.colliderect(npc["sprite"].rect.inflate(60, 60)):
                 self.dialogue_mgr.start_dialogue(npc["name"], npc["dialogue"])
-                # Unlock mission logic simplified
-                if "Rescapée" in npc["name"] and "Mission Sauvetage" not in self.unlocked_missions:
-                    self.unlocked_missions.append("Mission Sauvetage")
-                    self.manager.shared_data["unlocked_missions"] = self.unlocked_missions
                 return
 
         # Mission
@@ -192,8 +211,9 @@ class HubScene(Scene):
             self.show_mission_menu = True
             return
 
-        # Backstage
-        if self.player.rect.colliderect(self.backstage_rect):
+    def _on_travel_dialogue(self, action_id):
+        self.dialogue_mgr.active = False
+        if action_id == "go_backstage":
             self.manager.switch_to("backstage")
 
     def _on_merchant_dialogue(self, action_id):
@@ -242,8 +262,7 @@ class HubScene(Scene):
                       self._draw_prompt(screen, "[E] Parler", font)
             if self.player.rect.colliderect(self.mission_rect):
                 self._draw_prompt(screen, "[E] MISSIONS", font, NEON_PINK)
-            if self.player.rect.colliderect(self.backstage_rect):
-                self._draw_prompt(screen, "[E] BACKSTAGE", font, GOLD_COLOR)
+
 
         # UIs
         self.dialogue_mgr.draw(screen)

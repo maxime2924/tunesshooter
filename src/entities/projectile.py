@@ -1,5 +1,5 @@
 import pygame
-from settings import *
+from core.settings import *
 
 class Projectile(pygame.sprite.Sprite):
     def __init__(self, pos, velocity, screen_rect=None, damage=1, is_enemy=False):

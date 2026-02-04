@@ -1,16 +1,18 @@
 import pygame
 import os
-from settings import *
-from scenes import SceneManager
-from menu import MainMenu
-from hub_scene import HubScene
-from backstage_scene import BackstageScene
-from mission_scene import MissionScene
-from player import Player
-from asset_manager import AssetManager
+from core.settings import *
+from states.scenes import SceneManager
+from states.menu import MainMenu
+from states.hub_scene import HubScene
+from states.backstage_scene import BackstageScene
+from states.mission_scene import MissionScene
+from states.pause_menu import PauseMenu
+from entities.player import Player
+from core.asset_manager import AssetManager
 
 class Game(SceneManager):
     def __init__(self):
+        os.environ['SDL_VIDEO_CENTERED'] = '1'
         pygame.init()
         # Fullscreen Support
         info = pygame.display.Info()
@@ -35,11 +37,13 @@ class Game(SceneManager):
         }
         
         # Enregistrement des scènes
+        # Enregistrement des scènes
         self.scenes = {
             'menu': MainMenu,
             'hub': HubScene,
             'backstage': BackstageScene,
-            'mission': MissionScene
+            'mission': MissionScene,
+            'pause': PauseMenu(self)
         }
         
         # Démarrage
@@ -77,3 +81,5 @@ class Game(SceneManager):
             traceback.print_exc()
         finally:
             pygame.quit()
+            import sys
+            sys.exit()

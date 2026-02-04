@@ -1,5 +1,5 @@
 import pygame
-from asset_manager import AssetManager
+from core.asset_manager import AssetManager
 
 
 class Player(pygame.sprite.Sprite):
@@ -74,7 +74,7 @@ class Player(pygame.sprite.Sprite):
         """Return a Projectile instance aimed at target_pos or None if on cooldown."""
         if now - self.last_shot < self.shot_cooldown:
             return None
-        from projectile import Projectile
+        from entities.projectile import Projectile
         start = pygame.math.Vector2(self.rect.center)
         target = pygame.math.Vector2(target_pos)
         direction = target - start

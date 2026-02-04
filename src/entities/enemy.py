@@ -1,7 +1,7 @@
 import pygame
 import random
-from settings import *
-from asset_manager import AssetManager
+from core.settings import *
+from core.asset_manager import AssetManager
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, screen_rect, hp=3, damage=1):

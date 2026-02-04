@@ -1,5 +1,5 @@
 import pygame
-from settings import *
+from core.settings import *
 
 class ShopItem:
     def __init__(self, name, cost, min_level, effect_type, effect_value, description):

@@ -1,7 +1,7 @@
 import pygame
 import random
-from enemy import Enemy
-from asset_manager import AssetManager
+from entities.enemy import Enemy
+from core.asset_manager import AssetManager
 
 class Zombie(Enemy):
     def __init__(self, screen_rect, hp=5, damage=2):

@@ -1,8 +1,8 @@
 import pygame
 import random
 import math
-from settings import *
-from asset_manager import AssetManager
+from core.settings import *
+from core.asset_manager import AssetManager
 
 class RangedEnemy(pygame.sprite.Sprite):
     def __init__(self, screen_rect, hp=2, damage=1):
@@ -37,7 +37,7 @@ class RangedEnemy(pygame.sprite.Sprite):
         if now - self.last_shot < self.shot_cooldown:
             return None
         
-        from projectile import Projectile
+        from entities.projectile import Projectile
         start = pygame.math.Vector2(self.rect.center)
         target_pos = pygame.math.Vector2(target.rect.center)
         direction = target_pos - start

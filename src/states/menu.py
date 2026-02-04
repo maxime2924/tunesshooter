@@ -1,6 +1,6 @@
-from settings import *
-from asset_manager import AssetManager
-from scenes import Scene
+from core.settings import *
+from core.asset_manager import AssetManager
+from states.scenes import Scene
 
 class MainMenu(Scene):
     def __init__(self, manager):
