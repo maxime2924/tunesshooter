@@ -6,6 +6,7 @@ from core.asset_manager import AssetManager
 from core.camera import CameraGroup
 # from base import Entity, Pyramid, AnimatedEntity # Removed, using entities
 from entities.entity import Entity, AnimatedEntity
+from entities.building import Pyramid
 # For now we assume base.py still has Entity/Pyramid classes but we are rewriting BaseZone -> HubScene
 
 class HubScene(Scene):

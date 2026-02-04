@@ -10,7 +10,7 @@ class AssetManager:
             cls._instance.images = {}
             cls._instance.sounds = {}
             cls._instance.fonts = {}
-            cls._instance.base_path = os.path.dirname(os.path.abspath(__file__))
+            cls._instance.base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # src/core -> src -> root
             cls._instance.assets_path = os.path.join(cls._instance.base_path, 'assets')
         return cls._instance
 
