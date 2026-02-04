@@ -1,4 +1,6 @@
 import pygame
+from asset_manager import AssetManager
+
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, screen_rect):
@@ -9,17 +11,25 @@ class Player(pygame.sprite.Sprite):
         self.speed = 5
         self.hp = 100
         self.max_hp = 100
-        self.gold = 0
         self.screen_rect = screen_rect
-        # Shooting / upgradeable stats
+
+        # --- ECONOMIE ---
+        self.gold = 10000  # Start with 10k as requested
+        self.banked_gold = 500  # Some initial banked gold too
+        self.gold_per_second = 0  # Revenu passif
+        self.last_passive_income = 0  # Timer pour le revenu
+
+        # Stats de tir
         self.last_shot = 0
-        self.shot_cooldown = 250  # ms
-        self.projectile_speed = 10
-        self.projectile_damage = 1
+        self.shot_cooldown = 150  # ms (Plus rapide)
+        self.projectile_speed = 18 # Plus rapide
+        self.projectile_damage = 2 # Un peu plus de degats de base
+
         # XP / leveling
         self.xp = 0
         self.level = 1
-        # Upgrade tracking
+
+        # Suivi des améliorations
         self.upgrade_levels = {
             'rapid_fire': 0,
             'move_speed': 0,
@@ -27,26 +37,36 @@ class Player(pygame.sprite.Sprite):
             'projectile_speed': 0
         }
 
-    def add_xp(self, amount: int):
+    def update_passive_income(self, current_time):
+        """Génère de l'or automatiquement si on a des équipements."""
+        if self.gold_per_second > 0:
+            if current_time - self.last_passive_income >= 1000:  # Toutes les 1000ms (1s)
+                self.banked_gold += self.gold_per_second
+                self.last_passive_income = current_time
+                print(f"Revenu passif: +{self.gold_per_second}g (Total Banque: {self.banked_gold})")
+
+    def add_xp(self, amount):
         self.xp += amount
-        # simple level-up: every 100 XP => level up
-        while self.xp >= self.level * 100:
-            self.xp -= self.level * 100
+        # Level up basique : 100 * niveau actuel requis
+        req_xp = self.level * 100
+        while self.xp >= req_xp:
+            self.xp -= req_xp
             self.level += 1
-            # optional: reward on level up
             self.max_hp += 10
             self.hp = self.max_hp
-    
+            print(f"LEVEL UP! Niveau {self.level}")
+            req_xp = self.level * 100
+
     def update(self):
         keys = pygame.key.get_pressed()
         dx = (keys[pygame.K_RIGHT] or keys[pygame.K_d]) - (keys[pygame.K_LEFT] or keys[pygame.K_a])
         dy = (keys[pygame.K_DOWN] or keys[pygame.K_s]) - (keys[pygame.K_UP] or keys[pygame.K_w])
-        
+
         if dx or dy:
             move = pygame.math.Vector2(dx, dy).normalize() * self.speed
             self.rect.x += move.x
             self.rect.y += move.y
-        
+
         if self.screen_rect:
             self.rect.clamp_ip(self.screen_rect)
 
@@ -62,6 +82,14 @@ class Player(pygame.sprite.Sprite):
             direction = pygame.math.Vector2(1, 0)
         velocity = direction.normalize() * self.projectile_speed
         self.last_shot = now
+        
+        # Son
+        assets = AssetManager()
+        laser = assets.get_sound("laser.wav")
+        if laser:
+            laser.set_volume(0.4)
+            laser.play()
+            
         return Projectile(self.rect.center, velocity, self.screen_rect, damage=self.projectile_damage)
 
     def heal_full(self):
@@ -71,72 +99,54 @@ class Player(pygame.sprite.Sprite):
         """Réinitialise le joueur pour une nouvelle partie."""
         self.hp = self.max_hp
         self.gold = 0
-        self.xp = 0
-        # level is kept from previous run (stocké ailleurs si besoin)
-        self.speed = 5
         self.last_shot = 0
-        self.shot_cooldown = 250
-        self.projectile_speed = 10
-        self.projectile_damage = 1
-        self.upgrade_levels = {
-            'rapid_fire': 0,
-            'move_speed': 0,
-            'projectile_damage': 0,
-            'projectile_speed': 0
-        }
+        # On ne reset plus les stats pour garder les upgrades du shop.
         self.rect.center = (self.screen_rect.width // 2, self.screen_rect.height // 2)
 
-    def get_upgrade_caps(self, buildings):
+    @staticmethod
+    def get_upgrade_caps(buildings):
         """
         Retourne les caps d'améliorations basés sur les niveaux des bâtiments.
-        buildings: liste des objets Building
+        (Méthode statique car elle n'utilise pas 'self')
         """
         caps = {
-            'rapid_fire': 50,           # Cap par défaut (pas de bâtiment ou niveau 0)
+            'rapid_fire': 50,
             'move_speed': 50,
             'projectile_damage': 50,
             'projectile_speed': 50
         }
-        
-        # Mapping bâtiments -> upgrades (cap = niveau * 5, seulement si niveau > 0)
+
         for building in buildings:
-            if building.level > 0:  # Seulement si le bâtiment a été amélioré
-                if building.name == "Armurerie":  # Weapon damage
+            if building.level > 0:
+                if building.name == "Armurerie":
                     caps['projectile_damage'] = building.level * 5
-                elif building.name == "Forge":  # Speed
+                elif building.name == "Forge":
                     caps['move_speed'] = building.level * 5
-                elif building.name == "Temple":  # HP and defense (rapid_fire)
+                elif building.name == "Temple":
                     caps['rapid_fire'] = building.level * 5
-                elif building.name == "Bibliothèque":  # XP related (projectile_speed)
+                elif building.name == "Bibliothèque":
                     caps['projectile_speed'] = building.level * 5
-        
         return caps
-    
+
     def apply_upgrade_bonuses(self, buildings):
         """Applique les bonus permanents des bâtiments au joueur."""
-        # Réinitialiser aux valeurs de base
+        # Reset stats de base
         self.speed = 5
         self.projectile_damage = 1
         self.max_hp = 100
         self.shot_cooldown = 250
-        
+
         for building in buildings:
             if building.name == "Armurerie":
-                # Bonus de dégâts: +0.5 par niveau
                 self.projectile_damage += building.level * 0.5
             elif building.name == "Forge":
-                # Bonus de vitesse: +0.5 par niveau
                 self.speed += building.level * 0.5
             elif building.name == "Temple":
-                # Bonus de HP max: +5 par niveau
                 self.max_hp += building.level * 5
-                self.hp = self.max_hp  # Restaurer la vie au max
+                self.hp = self.max_hp
             elif building.name == "Marché":
-                # Bonus d'or (appliqué à la récolte dans main.py)
                 pass
             elif building.name == "Bibliothèque":
-                # Bonus d'XP (appliqué à la récolte dans main.py)
                 pass
-        
-        # Assurer que projectile_damage est au moins 1
+
         self.projectile_damage = max(1, self.projectile_damage)

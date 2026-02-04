@@ -1,11 +1,22 @@
 import pygame
 import random
+from settings import *
+from asset_manager import AssetManager
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, screen_rect, hp=3, damage=1):
         super().__init__()
-        self.image = pygame.Surface((30, 30))
-        self.image.fill((255, 0, 0))
+        assets = AssetManager()
+        # On tente de charger une image si elle existe, sinon carré rouge
+        # Pour l'instant on garde le carré rouge s'il n'y a pas d'image spécifique prête
+        # Mais préparons le terrain pour 'enemy.png' qui était dans la liste
+        try:
+            self.image = assets.get_image("enemy.png")
+            self.image = pygame.transform.scale(self.image, (30, 30))
+        except:
+             self.image = pygame.Surface((30, 30))
+             self.image.fill(RED)
+        
         self.rect = self.image.get_rect(center=(random.randint(50, screen_rect.width-50), random.randint(50, screen_rect.height-50)))
         self.speed = 2
         self.screen_rect = screen_rect
@@ -25,3 +36,4 @@ class Enemy(pygame.sprite.Sprite):
     def take_damage(self, amount=1):
         self.hp -= amount
         return self.hp <= 0
+
