@@ -11,14 +11,14 @@ class Entity(pygame.sprite.Sprite):
              self.image = image
              if scale:
                  self.image = pygame.transform.scale(self.image, scale)
-             self.rect = self.image.get_rect(topleft=pos)
-             # Hitbox plus petite pour "profondeur" (bas de l'objet)
-             self.hitbox = pygame.Rect(self.rect.x, self.rect.bottom - 20, self.rect.width, 20)
+             # Use CENTER for positioning (consistent with Pyramid)
+             self.rect = self.image.get_rect(center=pos)
+             # Don't create default hitbox - let caller define it if needed
+             # self.hitbox will be set manually if needed
         else:
              self.image = pygame.Surface((32, 32))
              self.image.fill(WHITE)
-             self.rect = self.image.get_rect(topleft=pos)
-             self.hitbox = self.rect
+             self.rect = self.image.get_rect(center=pos)
 
     def take_damage(self, amount):
         if hasattr(self, 'hp'):

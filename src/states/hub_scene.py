@@ -1,13 +1,13 @@
+import math
 from core.settings import *
 from states.scenes import Scene
 from ui.dialogue import DialogueManager
 from core.shop_system import Merchant, ShopItem
 from core.asset_manager import AssetManager
 from core.camera import CameraGroup
-# from base import Entity, Pyramid, AnimatedEntity # Removed, using entities
 from entities.entity import Entity, AnimatedEntity
 from entities.building import Pyramid
-# For now we assume base.py still has Entity/Pyramid classes but we are rewriting BaseZone -> HubScene
+from entities.player import Player
 
 class HubScene(Scene):
     def __init__(self, manager):
@@ -18,7 +18,6 @@ class HubScene(Scene):
         # Shared Player
         self.player = self.manager.shared_data.get('player')
         if not self.player:
-            from entities.player import Player
             self.player = Player(pygame.Rect(0, 0, HUB_WIDTH, HUB_HEIGHT))
             self.manager.shared_data['player'] = self.player
 
@@ -55,46 +54,112 @@ class HubScene(Scene):
             self.camera_group.add(self.player)
 
     def _setup_world(self):
+        # Central Pyramid (Missions)
         pyramid_img = self.assets.get_image("pyramid.png")
         if pyramid_img:
-            # Centre
-            px, py = self.width // 2 - 150, self.height // 2 - 100
-            self.pyramid = Pyramid([self.camera_group, self.collision_sprites], image=pyramid_img, pos=(px, py), scale=(300, 200))
-            self.pyramid.hitbox = pygame.Rect(px + 40, py + 80, 220, 120)
+            # Place at center
+            pyramid_x = self.width // 2
+            pyramid_y = self.height // 2
             
-            # DJ
-            self.dj = AnimatedEntity([self.camera_group], "daft_dj.png", pos=(px + 130, py + 60), scale=(40, 40))
+            self.pyramid = Pyramid(
+                [self.camera_group, self.collision_sprites], 
+                image=pyramid_img,
+                pos=(pyramid_x, pyramid_y),
+                scale=(300, 200)
+            )
             
-            self.mission_rect = pygame.Rect(px + 90, py + 210, 120, 60)
+            # Pyramid hitbox for collisions
+            # pos = center of sprite, so sprite rect goes from:
+            # (pyramid_x - 150, pyramid_y - 100) to (pyramid_x + 150, pyramid_y + 100)
+            # Make hitbox slightly smaller for better gameplay
+            self.pyramid.hitbox = pygame.Rect(
+                pyramid_x - 130,  # Slightly smaller than sprite
+                pyramid_y - 80,   # Slightly smaller than sprite
+                260,              # Width (was 300)
+                160               # Height (was 200)
+            )
+            
+            # Mission interaction zone (around pyramid)
+            self.mission_rect = pygame.Rect(
+                pyramid_x - 150, 
+                pyramid_y - 150, 
+                300, 
+                300
+            )
         else:
             self.mission_rect = pygame.Rect(self.width//2 - 50, self.height//2 - 50, 100, 100)
 
     def _setup_decor(self):
-        # Ajout d'obstacles décoratifs "physiques"
-        import random
-        from entities.walls import Obstacle
+        # Visual path tiles around pyramid
+        path_tile_size = 32
+        path_color = (100, 120, 140)  # Gray-blue path color
         
-        # Quelques blocs autour du centre pour donner de la vie
         cx, cy = self.width // 2, self.height // 2
+        path_positions = []
         
-        decor_positions = [
-            (cx - 400, cy - 200), (cx + 400, cy - 200),
-            (cx - 400, cy + 300), (cx + 400, cy + 300),
-            (cx - 600, cy), (cx + 600, cy)
+        # 1. CIRCULAR PATH around pyramid (radius = 250px)
+        circle_radius = 250
+        num_circle_tiles = 50  # Number of tiles in circle
+        
+        for i in range(num_circle_tiles):
+            angle = (i / num_circle_tiles) * 2 * math.pi
+            x = cx + circle_radius * math.cos(angle)
+            y = cy + circle_radius * math.sin(angle)
+            path_positions.append((x, y))
+        
+        # 2. BRANCHES from circle to each merchant
+        # Merchant positions (from _setup_merchants)
+        merchant_positions = [
+            (cx - 400, cy),           # Armurier (West)
+            (cx + 500, cy),           # Ingénieur (East)
+            (cx - 300, cy + 400),     # Garagiste (South-West)
+            (cx + 300, cy + 400),     # Passeur (South-East)
         ]
         
-        for x, y in decor_positions:
-            # Variance
-            x += random.randint(-50, 50)
-            y += random.randint(-50, 50)
-            Obstacle([self.camera_group, self.collision_sprites], (x, y), (60, 60), color=(40, 40, 50))
+        # Create straight paths from circle to each merchant
+        for merchant_pos in merchant_positions:
+            # Find closest point on circle to merchant
+            dx = merchant_pos[0] - cx
+            dy = merchant_pos[1] - cy
+            dist = math.sqrt(dx*dx + dy*dy)
+            
+            # Circle edge point
+            circle_x = cx + (dx / dist) * circle_radius
+            circle_y = cy + (dy / dist) * circle_radius
+            
+            # Create tiles from circle to merchant
+            num_branch_tiles = int(dist - circle_radius) // path_tile_size
+            for i in range(num_branch_tiles):
+                t = i / max(num_branch_tiles, 1)
+                x = circle_x + (merchant_pos[0] - circle_x) * t
+                y = circle_y + (merchant_pos[1] - circle_y) * t
+                path_positions.append((x, y))
+        
+        # Draw all path tiles
+        for pos in path_positions:
+            path_tile = pygame.Surface((path_tile_size, path_tile_size))
+            path_tile.fill(path_color)
+            pygame.draw.rect(path_tile, (80, 100, 120), (0, 0, path_tile_size, path_tile_size), 2)
+            
+            tile_entity = Entity([self.camera_group], image=path_tile, pos=pos, scale=None)
+            tile_entity.rect = path_tile.get_rect(center=pos)
 
     def _setup_merchants(self):
         self.merchants_data = [] 
         def add(img_name, pos, name, text, type_filter, action="shop"):
             img = self.assets.get_image(img_name)
-            sprite = Entity([self.camera_group, self.interactables, self.collision_sprites], image=img, pos=pos, scale=(150, 150))
-            sprite.hitbox = pygame.Rect(pos[0] + 20, pos[1] + 100, 110, 50)
+            sprite = Entity([self.camera_group, self.interactables, self.collision_sprites], 
+                          image=img, pos=pos, scale=(150, 150))
+            
+            # FIX: pos is the CENTER of the sprite (150x150)
+            # So the sprite goes from (pos[0]-75, pos[1]-75) to (pos[0]+75, pos[1]+75)
+            # Hitbox should be centered on sprite, slightly smaller
+            sprite.hitbox = pygame.Rect(
+                pos[0] - 60,  # 120 wide, centered on pos[0]
+                pos[1] - 60,  # 120 tall, centered on pos[1]
+                120,
+                120
+            )
             
             if action == "shop":
                 m_obj = Merchant()
@@ -110,7 +175,7 @@ class HubScene(Scene):
         
         # Ecartement un peu plus grand
         add("merchant_stand.png", (cx - 400, cy), "Armurier", "Le son est une arme.", "damage")
-        add("merchant_base_upgrade.png", (cx + 250, cy), "Ingénieur", "Garde le rythme.", "hp")
+        add("merchant_base_upgrade.png", (cx + 500, cy), "Ingénieur", "Garde le rythme.", "hp")  # Moved further right
         add("merchant_vehicle_garage.png", (cx - 300, cy + 400), "Garagiste", "Répare ta bécane.", "speed")
         add("merchant_stand.png", (cx + 300, cy + 400), "Passeur", "Tu veux voir l'envers du décor ?", "none", action="travel")
 
@@ -118,47 +183,52 @@ class HubScene(Scene):
     def _setup_npcs(self):
         self.lore_npcs = []
         npc_data = [
-            ("L'Ancien", "Tout a changé depuis le Silence.", (MAP_WIDTH//2 - 100, MAP_HEIGHT//2 - 200)),
+            ("L'Ancien", "Tout a changé depuis le Silence.", (MAP_WIDTH//2, MAP_HEIGHT//2 - 500)),  # Much further up
         ]
         img = self.assets.get_image("punk_npc.png")
         for name, txt, pos in npc_data:
-            npc = Entity([self.camera_group, self.interactables, self.npcs], image=img, pos=pos, scale=(50, 80))
+            # Add to collision_sprites so player can't walk through
+            npc = Entity([self.camera_group, self.interactables, self.npcs, self.collision_sprites], 
+                        image=img, pos=pos, scale=(50, 80))
+            # Add proper hitbox for NPC
+            npc.hitbox = pygame.Rect(
+                pos[0] - 25,  # Center horizontally
+                pos[1] - 40,  # Center vertically
+                50,           # Width
+                80            # Height
+            )
             self.lore_npcs.append({"sprite": npc, "name": name, "dialogue": txt})
 
     def update(self):
+        # Let player handle its own movement
+        self.player.update()
+        
+        # Update camera group
         self.camera_group.update()
-        if self._is_ui_open(): return
-
-        # Movement
-        keys = pygame.key.get_pressed()
-        dx, dy = 0, 0
-        speed = 8 
-        if keys[pygame.K_z] or keys[pygame.K_UP]: dy -= speed
-        if keys[pygame.K_s] or keys[pygame.K_DOWN]: dy += speed
-        if keys[pygame.K_q] or keys[pygame.K_LEFT]: dx -= speed
-        if keys[pygame.K_d] or keys[pygame.K_RIGHT]: dx += speed
         
-        if dx != 0 and dy != 0: dx, dy = dx*0.707, dy*0.707
-
-        # Collisions & Movement
-        self.player.rect.x += dx
-        # Collision X
+        # Manual collision with hitboxes
         for sprite in self.collision_sprites:
-            if hasattr(sprite, 'hitbox') and self.player.rect.colliderect(sprite.hitbox):
-                 from entities.entity import separate_sprites
-                 separate_sprites(self.player, sprite, True, False) # Using separate_sprites helper
-                 # Ou manuellement si separate_sprites ne gère pas hitbox vs rect
-                 if dx > 0: self.player.rect.right = sprite.hitbox.left
-                 if dx < 0: self.player.rect.left = sprite.hitbox.right
-        
-        self.player.rect.y += dy
-        # Collision Y
-        for sprite in self.collision_sprites:
-             if hasattr(sprite, 'hitbox') and self.player.rect.colliderect(sprite.hitbox):
-                   if dy > 0: self.player.rect.bottom = sprite.hitbox.top
-                   if dy < 0: self.player.rect.top = sprite.hitbox.bottom
-        
-        self.player.rect.clamp_ip(pygame.Rect(0, 0, self.width, self.height))
+            if hasattr(sprite, 'hitbox'):
+                if self.player.rect.colliderect(sprite.hitbox):
+                    # Push player out of hitbox
+                    # Simple overlap resolution
+                    overlap_x = min(self.player.rect.right - sprite.hitbox.left,
+                                   sprite.hitbox.right - self.player.rect.left)
+                    overlap_y = min(self.player.rect.bottom - sprite.hitbox.top,
+                                   sprite.hitbox.bottom - self.player.rect.top)
+                    
+                    if overlap_x < overlap_y:
+                        # Push horizontally
+                        if self.player.rect.centerx < sprite.hitbox.centerx:
+                            self.player.rect.right = sprite.hitbox.left
+                        else:
+                            self.player.rect.left = sprite.hitbox.right
+                    else:
+                        # Push vertically
+                        if self.player.rect.centery < sprite.hitbox.centery:
+                            self.player.rect.bottom = sprite.hitbox.top
+                        else:
+                            self.player.rect.top = sprite.hitbox.bottom
 
     def handle_input(self, events):
         # Dialogue
@@ -251,6 +321,34 @@ class HubScene(Scene):
 
     def draw(self, screen):
         self.camera_group.custom_draw(self.player)
+        
+        # === DEBUG: Draw Hitboxes ===
+        # Draw hitboxes in red so we can see them
+        for m in self.merchants_data:
+            if hasattr(m["sprite"], 'hitbox'):
+                # Convert world position to screen position
+                offset_pos = self.camera_group.offset
+                hitbox_screen = m["sprite"].hitbox.copy()
+                hitbox_screen.x -= int(offset_pos.x)
+                hitbox_screen.y -= int(offset_pos.y)
+                pygame.draw.rect(screen, (255, 0, 0), hitbox_screen, 2)  # Red outline
+        
+        for npc in self.lore_npcs:
+            if hasattr(npc["sprite"], 'hitbox'):
+                offset_pos = self.camera_group.offset
+                hitbox_screen = npc["sprite"].hitbox.copy()
+                hitbox_screen.x -= int(offset_pos.x)
+                hitbox_screen.y -= int(offset_pos.y)
+                pygame.draw.rect(screen, (255, 0, 0), hitbox_screen, 2)
+        
+        # Pyramid hitbox
+        if hasattr(self.pyramid, 'hitbox'):
+            offset_pos = self.camera_group.offset
+            hitbox_screen = self.pyramid.hitbox.copy()
+            hitbox_screen.x -= int(offset_pos.x)
+            hitbox_screen.y -= int(offset_pos.y)
+            pygame.draw.rect(screen, (0, 255, 0), hitbox_screen, 3)  # Green outline
+        # === END DEBUG ===
         
         # Prompts
         if not self._is_ui_open():

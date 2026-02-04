@@ -5,8 +5,31 @@ from core.asset_manager import AssetManager
 class Player(pygame.sprite.Sprite):
     def __init__(self, screen_rect):
         super().__init__()
-        self.image = pygame.Surface((40, 40))
-        self.image.fill((0, 0, 255))
+        
+        # Load sprite sheet
+        import os
+        assets = AssetManager()
+
+        sprite_path = os.path.join(assets.assets_path, "Tech Dungeon Roguelite - Asset Pack (DEMO)", "Players", "players blue x2.png")
+        
+        try:
+            self.sprite_sheet = pygame.image.load(sprite_path).convert_alpha()
+            # Sheet is 8 columns x 13 rows (from 8x13 Cells.txt)
+            # Each cell is approximately sprite_sheet.width / 8
+            self.cell_width = self.sprite_sheet.get_width() // 8
+            self.cell_height = self.sprite_sheet.get_height() // 13
+            
+            # Extract idle frame (row 0, col 0)
+            self.image = pygame.Surface((self.cell_width, self.cell_height), pygame.SRCALPHA)
+            self.image.blit(self.sprite_sheet, (0, 0), (0, 0, self.cell_width, self.cell_height))
+            # Scale up 2x for visibility
+            self.image = pygame.transform.scale(self.image, (self.cell_width * 2, self.cell_height * 2))
+        except Exception as e:
+            print(f"Failed to load player sprite: {e}")
+            # Fallback
+            self.image = pygame.Surface((40, 40))
+            self.image.fill((0, 0, 255))
+        
         self.rect = self.image.get_rect(center=(screen_rect.width // 2, screen_rect.height // 2))
         self.speed = 5
         self.hp = 100
@@ -37,6 +60,7 @@ class Player(pygame.sprite.Sprite):
             'projectile_speed': 0
         }
 
+
     def update_passive_income(self, current_time):
         """Génère de l'or automatiquement si on a des équipements."""
         if self.gold_per_second > 0:
@@ -58,15 +82,20 @@ class Player(pygame.sprite.Sprite):
             req_xp = self.level * 100
 
     def update(self):
+        """Smooth free movement."""
         keys = pygame.key.get_pressed()
-        dx = (keys[pygame.K_RIGHT] or keys[pygame.K_d]) - (keys[pygame.K_LEFT] or keys[pygame.K_a])
-        dy = (keys[pygame.K_DOWN] or keys[pygame.K_s]) - (keys[pygame.K_UP] or keys[pygame.K_w])
-
-        if dx or dy:
-            move = pygame.math.Vector2(dx, dy).normalize() * self.speed
-            self.rect.x += move.x
-            self.rect.y += move.y
-
+        
+        # Movement
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
+            self.rect.y -= self.speed
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            self.rect.y += self.speed
+        if keys[pygame.K_LEFT] or keys[pygame.K_a] or keys[pygame.K_q]:
+            self.rect.x -= self.speed
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            self.rect.x += self.speed
+        
+        # Keep in bounds
         if self.screen_rect:
             self.rect.clamp_ip(self.screen_rect)
 

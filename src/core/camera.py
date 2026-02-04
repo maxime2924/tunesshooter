@@ -49,6 +49,9 @@ class CameraGroup(pygame.sprite.Group):
         self.floor_rect = self.floor_surf.get_rect(topleft=(0, 0))
 
     def custom_draw(self, player):
+        # Clear screen to avoid Hall of Mirrors in void areas
+        self.display_surface.fill((0, 0, 0))
+
         # Center camera on player
         self.offset.x = player.rect.centerx - self.half_width
         self.offset.y = player.rect.centery - self.half_height

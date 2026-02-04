@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+import os
 from core.settings import *
 from states.scenes import Scene
 from core.asset_manager import AssetManager
@@ -13,7 +14,8 @@ from entities.ranged_enemy import RangedEnemy
 from entities.enemies_variants import Zombie, Robot
 from entities.gold import Gold
 
-from entities.walls import Wall
+from entities.walls import Wall, Obstacle
+
 
 class LoreNPC(Entity):
     def __init__(self, groups, pos, color, name, dialogue_text):
@@ -104,6 +106,19 @@ class MissionScene(Scene):
             self.player.rect.topleft = (100, self.corridor_height // 2)
             self._build_level_linear()
             
+        elif self.mission_type == "Promenade Zen":
+            # 5 min walk approx. Player speed is 5px/frame -> 300px/s -> 18000px/min -> 90000px for 5 mins
+            # That's huge. Let's aim for a 2-3 min walk first or scaled down.
+            # Let's do 20000px length.
+            self.level_length = 20000 
+            self.corridor_height = 1200
+            self.width = self.level_length
+            self.height = self.corridor_height
+            # Use grass as base
+            self.camera_group.set_tiled_background("grass.png", self.level_length, self.corridor_height)
+            self.player.rect.topleft = (100, self.corridor_height // 2)
+            self._build_level_zen()
+            
         else: # Open World
             self.width, self.height = OPEN_WORLD_WIDTH, OPEN_WORLD_HEIGHT
             self.camera_group.set_tiled_background("grass.png", OPEN_WORLD_WIDTH, OPEN_WORLD_HEIGHT)
@@ -112,6 +127,65 @@ class MissionScene(Scene):
 
         if self.player not in self.camera_group:
             self.camera_group.add(self.player)
+
+    def _build_level_zen(self):
+        """Génère un long chemin paisible avec les nouveaux assets."""
+        
+        # Path generation: Sine wave path
+        path_y_center = self.corridor_height // 2
+        path_width = 300
+        
+        # Asset Loading for decoration
+        pixel_assets = []
+        base_path = os.path.join(self.assets.assets_path, "assets_pixel_50x50")
+        if os.path.exists(base_path):
+             pixel_assets = [os.path.join(base_path, f) for f in os.listdir(base_path) if f.endswith(".png")]
+        
+        # We need "Wall" tiles versus "Decor" tiles. 
+        # Since I don't know exactly which is which by index without looking, I will use:
+        # - Solid walls on top/bottom
+        # - Random decor on sides
+        
+        # 1. Borders
+        self.walls.add(Wall([self.camera_group, self.walls], (0, -50), (self.level_length, 50))) # Top
+        self.walls.add(Wall([self.camera_group, self.walls], (0, self.corridor_height), (self.level_length, 50))) # Bottom
+        self.walls.add(Wall([self.camera_group, self.walls], (-50, 0), (50, self.corridor_height))) # Left
+        self.walls.add(Wall([self.camera_group, self.walls], (self.level_length, 0), (50, self.corridor_height))) # Right
+
+        # 2. Path Decoration
+        for x in range(0, self.level_length, 100):
+            # Sine wave center
+            y_offset = math.sin(x / 1000) * 300
+            current_y = path_y_center + y_offset
+            
+            # Place trees/rocks (Obstacles) OUTSIDE the path
+            # Up
+            if pixel_assets:
+                 img_path = random.choice(pixel_assets)
+                 # Only if far enough
+                 try:
+                     img = pygame.image.load(img_path).convert_alpha()
+                     img = pygame.transform.scale(img, (60, 60))
+                     
+                     # Top side decor
+                     if random.random() < 0.3:
+                         oy = random.randint(50, int(current_y - path_width//2 - 60))
+                         obs = Obstacle([self.camera_group, self.walls], (x, oy), (40, 40)) # Physical
+                         obs.image = img # Swap visual
+                     
+                     # Bottom side decor
+                     if random.random() < 0.3:
+                         oy = random.randint(int(current_y + path_width//2), self.corridor_height - 100)
+                         obs = Obstacle([self.camera_group, self.walls], (x, oy), (40, 40))
+                         obs.image = img
+                 except: pass
+
+        # 3. No Enemies (Peaceful) or very few
+        # User said "me balade juste", so no enemies.
+        
+        # 4. End Zone
+        self.extraction_zone = pygame.Rect(self.level_length - 400, path_y_center - 100, 200, 200)
+        self.extraction_active = True # Visible immediately
 
     def _build_level_linear(self):
         # Configuration Zig-Zag
@@ -195,8 +269,6 @@ class MissionScene(Scene):
 
     def _build_level_open(self):
         # Spawn initial decorations (Fake PNGs/Obstacles)
-        import random
-        from entities.walls import Obstacle
         for _ in range(40): # 40 obstacles
              ox = random.randint(100, self.width - 100)
              oy = random.randint(100, self.height - 100)

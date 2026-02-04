@@ -31,12 +31,11 @@ class Game(SceneManager):
         # Note: MAP_WIDTH will be dynamic in MissionScene
         self.shared_data = {
             'player': Player(pygame.Rect(0, 0, 4000, 4000)),  
-            'unlocked_missions': ["Extraction Illimitée"],
+            'unlocked_missions': ["Extraction Illimitée", "Promenade Zen"],
             'inventory': [],
             'game_started': False
         }
         
-        # Enregistrement des scènes
         # Enregistrement des scènes
         self.scenes = {
             'menu': MainMenu,
