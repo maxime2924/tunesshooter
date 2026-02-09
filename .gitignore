@@ -1,3 +1,48 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# Virtual environments
 .venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test files
+test_*.py
+*_test.py
+tests/
+.pytest_cache/
+
+# Screenshots and debug files
+*.png
+!assets/*.png
+debug_*.png
+result_*.png
+
+# Requirements backup
+requirements_test.txt
+
+# Logs
+*.log

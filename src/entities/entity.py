@@ -11,10 +11,7 @@ class Entity(pygame.sprite.Sprite):
              self.image = image
              if scale:
                  self.image = pygame.transform.scale(self.image, scale)
-             # Use CENTER for positioning (consistent with Pyramid)
              self.rect = self.image.get_rect(center=pos)
-             # Don't create default hitbox - let caller define it if needed
-             # self.hitbox will be set manually if needed
         else:
              self.image = pygame.Surface((32, 32))
              self.image.fill(WHITE)
@@ -35,25 +32,20 @@ class AnimatedEntity(Entity):
         self.start_x = self.rect.x
     
     def update(self):
-        # Animation DJ Coachella: Bobbing + Slide
+        # DJ bobbing animation
         t = pygame.time.get_ticks()
         self.rect.y = self.start_y + math.sin(t / 150) * 8
-        self.rect.x = self.start_x + math.cos(t / 300) * 15 # Slide left/right mixing
+        self.rect.x = self.start_x + math.cos(t / 300) * 15
 
 def separate_sprites(a: pygame.sprite.Sprite, b: pygame.sprite.Sprite, push_a: bool = True, push_b: bool = True):
-    """Sépare deux sprites qui se chevauchent (AABB).
-    - Si push_a et push_b sont True, on déplace les deux de moitié.
-    - Si seul push_b est True, on déplace seulement b (utile pour pousser les ennemis hors du joueur).
-    """
+    # separates overlapping sprites
     overlap = a.rect.clip(b.rect)
     if overlap.width == 0 or overlap.height == 0:
         return
 
-    # Choisir la plus petite pénétration (x ou y)
     if overlap.width < overlap.height:
-        # Séparer sur l'axe X
+        # push on X axis
         if a.rect.centerx < b.rect.centerx:
-            # a à gauche, b à droite
             move_x = overlap.width
             move_a = -move_x // 2 if push_a and push_b else (-move_x if push_a else 0)
             move_b = move_x // 2 if push_a and push_b else (move_x if push_b else 0)
@@ -65,7 +57,7 @@ def separate_sprites(a: pygame.sprite.Sprite, b: pygame.sprite.Sprite, push_a: b
         a.rect.x += int(move_a)
         b.rect.x += int(move_b)
     else:
-        # Séparer sur l'axe Y
+        # push on Y
         if a.rect.centery < b.rect.centery:
             move_y = overlap.height
             move_a = -move_y // 2 if push_a and push_b else (-move_y if push_a else 0)

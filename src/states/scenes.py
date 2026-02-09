@@ -1,33 +1,26 @@
 import pygame
 
 class Scene:
-    """Classe de base pour toutes les scènes du jeu."""
     def __init__(self, manager):
         self.manager = manager
         self.next_scene = None
 
     def handle_input(self, events):
-        """Gestion des entrées utilisateur."""
         pass
 
     def update(self):
-        """Mise à jour logique."""
         pass
 
     def draw(self, screen):
-        """Rendu à l'écran."""
         pass
 
     def on_enter(self, **kwargs):
-        """Appelé à l'entrée de la scène (passage de données via kwargs)."""
         pass
 
     def on_exit(self):
-        """Appelé à la sortie de la scène."""
         pass
 
 class SceneManager:
-    """Gestionnaire des scènes actives."""
     def __init__(self, screen):
         self.screen = screen
         self.current_scene = None

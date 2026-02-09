@@ -12,13 +12,12 @@ class Gold(pygame.sprite.Sprite):
         self.speed = 5
         
     def update(self, player_pos):
-        # Magnet Effect
         p_vec = pygame.math.Vector2(player_pos)
         s_vec = pygame.math.Vector2(self.rect.center)
         dist = p_vec.distance_to(s_vec)
         
-        if dist < 200: # Magnet Range
+        if dist < 200:
             direction = p_vec - s_vec
             if direction.length() > 0:
                 self.rect.center += direction.normalize() * self.speed
-                self.speed += 0.5 # Accelerate towards player
+                self.speed += 0.5

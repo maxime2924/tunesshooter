@@ -2,7 +2,6 @@ import pygame
 from core.settings import *
 
 class DialogueManager:
-    """Gestionnaire centralisé de l'interface de dialogue."""
     def __init__(self, font):
         self.font = font
         self.active = False
@@ -22,7 +21,6 @@ class DialogueManager:
         if not self.active: return False
 
         if event.type == pygame.KEYDOWN:
-            # Sélection d'option
             if self.current_dialogue["options"]:
                 idx = -1
                 if pygame.K_1 <= event.key <= pygame.K_9:
@@ -36,10 +34,8 @@ class DialogueManager:
                         self.on_option_select(action_id)
                     return True 
             
-            # Continuer / Fermer
             elif event.key in [pygame.K_SPACE, pygame.K_RETURN, pygame.K_e, pygame.K_ESCAPE]:
                 self.active = False
-                # Trigger callback if it exists and we are just closing text (no options)
                 if not self.current_dialogue["options"] and self.on_option_select:
                      self.on_option_select(None)
                 self.current_dialogue = None
@@ -50,26 +46,21 @@ class DialogueManager:
     def draw(self, screen):
         if not self.active or not self.current_dialogue: return
 
-        # Configuration de la boîte de dialogue
         box_height = 200
         box_margin = 50
         box_rect = pygame.Rect(box_margin, HEIGHT - box_height - 20, WIDTH - 2 * box_margin, box_height)
 
-        # Fond et Bordure
         pygame.draw.rect(screen, (10, 10, 25), box_rect) 
         pygame.draw.rect(screen, NEON_BLUE, box_rect, 2) 
 
-        # Position du texte
         text_x = box_rect.x + 20
         current_y = box_rect.y + 15
 
-        # 1. Nom du personnage
         name_surf = self.font.render(f"--- {self.current_dialogue['name']} ---", True, GOLD_COLOR)
         screen.blit(name_surf, (text_x, current_y))
         current_y += 40
 
-        # 2. Texte principal (multiligne manuel via \n)
-        lines = self.current_dialogue['text'].split('\n')
+        lines = self.current_dialogue['text'].split('\\n')
         for line in lines:
             txt_surf = self.font.render(line, True, WHITE)
             screen.blit(txt_surf, (text_x, current_y))
@@ -77,7 +68,6 @@ class DialogueManager:
         
         current_y += 10
 
-        # 3. Options de réponse
         if self.current_dialogue["options"]:
             for i, (opt_text, _) in enumerate(self.current_dialogue["options"]):
                 opt_surf = self.font.render(f"[{i+1}] {opt_text}", True, NEON_GREEN)

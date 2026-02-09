@@ -39,7 +39,6 @@ class ParticleSystem:
             self.particles.append(Particle(pos, color, speed, lifetime, size))
             
     def add_trail(self, pos, color):
-        # Pour les missiles/projectiles
         self.particles.append(Particle(pos, color, 0.5, 10, 3))
 
     def update(self):

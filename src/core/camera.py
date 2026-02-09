@@ -9,16 +9,13 @@ class CameraGroup(pygame.sprite.Group):
         self.half_height = self.display_surface.get_size()[1] // 2
         self.offset = pygame.math.Vector2()
 
-        # Background
         self.floor_surf = None
         self.floor_rect = None
 
     def set_tiled_background(self, image_path, map_width, map_height):
-        # Charger l'image de texture
         try:
             from core.asset_manager import AssetManager
             assets = AssetManager()
-            # On essaye de charger par nom si asset manager le permet, sinon path direct
             if "/" in image_path or "\\" in image_path:
                  bg_image = pygame.image.load(image_path).convert()
             else:
@@ -41,7 +38,7 @@ class CameraGroup(pygame.sprite.Group):
         except Exception as e:
             print(f"Erreur creation fond tiled: {e}")
             self.floor_surf = pygame.Surface((map_width, map_height))
-            self.floor_surf.fill((20, 0, 20)) # Fail safe purple
+            self.floor_surf.fill((20, 0, 20))
             self.floor_rect = self.floor_surf.get_rect()
 
     def set_background_surface(self, surface):
@@ -49,28 +46,19 @@ class CameraGroup(pygame.sprite.Group):
         self.floor_rect = self.floor_surf.get_rect(topleft=(0, 0))
 
     def custom_draw(self, player):
-        # Clear screen to avoid Hall of Mirrors in void areas
         self.display_surface.fill((0, 0, 0))
 
-        # Center camera on player
         self.offset.x = player.rect.centerx - self.half_width
         self.offset.y = player.rect.centery - self.half_height
         
-        # Clamp camera to map bounds if needed (optional, keeping limitless for now or clamped usually)
-        # Clamping is better for immersion
         if self.floor_rect:
              self.offset.x = max(0, min(self.offset.x, self.floor_rect.width - WIDTH))
              self.offset.y = max(0, min(self.offset.y, self.floor_rect.height - HEIGHT))
 
-        # Draw Floor
         if self.floor_surf:
              floor_offset_pos = self.floor_rect.topleft - self.offset
              self.display_surface.blit(self.floor_surf, floor_offset_pos)
 
-        # Draw Sprites sorted by Y (Bas de l'image = devant)
         for sprite in sorted(self.sprites(), key=lambda sprite: sprite.rect.bottom):
             offset_pos = sprite.rect.topleft - self.offset
             self.display_surface.blit(sprite.image, offset_pos)
-            
-            # Debug Rect
-            # pygame.draw.rect(self.display_surface, (255, 0, 0), (*offset_pos, sprite.rect.width, sprite.rect.height), 1)

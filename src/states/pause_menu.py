@@ -34,10 +34,8 @@ class PauseMenu(Scene):
     def _resume(self):
         if self.previous_scene:
             self.manager.current_scene = self.previous_scene
-            # No on_enter call to preserve state
 
     def draw(self, screen):
-        # Draw previous scene bg if possible (transparency)
         if self.previous_scene:
             self.previous_scene.draw(screen)
         
@@ -45,7 +43,6 @@ class PauseMenu(Scene):
         overlay.fill((0, 0, 0, 180))
         screen.blit(overlay, (0, 0))
 
-        # Buttons
         self._draw_btn(screen, self.resume_btn, "Reprendre", NEON_GREEN)
         self._draw_btn(screen, self.abandon_btn, "Abandonner Mission", RED)
         self._draw_btn(screen, self.quit_btn, "Quitter Jeu", WHITE)

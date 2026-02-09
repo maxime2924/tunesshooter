@@ -1,7 +1,6 @@
 import sys
 import os
 
-# Add src to Python Path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from core.game import Game

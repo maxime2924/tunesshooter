@@ -10,7 +10,7 @@ class AssetManager:
             cls._instance.images = {}
             cls._instance.sounds = {}
             cls._instance.fonts = {}
-            cls._instance.base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # src/core -> src -> root
+            cls._instance.base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             cls._instance.assets_path = os.path.join(cls._instance.base_path, 'assets')
         return cls._instance
 
@@ -22,9 +22,8 @@ class AssetManager:
                 self.images[name] = img
             except pygame.error as e:
                 print(f"Error loading image {name}: {e}")
-                # Create a placeholder surface
                 surf = pygame.Surface((30, 30))
-                surf.fill((255, 0, 255)) # Magenta placeholder
+                surf.fill((255, 0, 255))
                 self.images[name] = surf
         return self.images[name]
 
@@ -44,7 +43,6 @@ class AssetManager:
         if key not in self.fonts:
             try:
                 if name:
-                    # Tente de charger depuis assets si c'est un fichier
                     path = os.path.join(self.assets_path, name)
                     if os.path.exists(path):
                         font = pygame.font.Font(path, size)

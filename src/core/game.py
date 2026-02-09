@@ -5,7 +5,7 @@ from states.scenes import SceneManager
 from states.menu import MainMenu
 from states.hub_scene import HubScene
 from states.backstage_scene import BackstageScene
-from states.mission_scene import MissionScene
+from states.mission import MissionScene
 from states.pause_menu import PauseMenu
 from entities.player import Player
 from core.asset_manager import AssetManager
@@ -14,7 +14,6 @@ class Game(SceneManager):
     def __init__(self):
         os.environ['SDL_VIDEO_CENTERED'] = '1'
         pygame.init()
-        # Fullscreen Support
         info = pygame.display.Info()
         self.screen_width = info.current_w
         self.screen_height = info.current_h
@@ -24,11 +23,8 @@ class Game(SceneManager):
         self.clock = pygame.time.Clock()
         self.running = True
         
-        # Initialisation du SceneManager
         super().__init__(self.screen)
         
-        # Données partagées (Joueur global)
-        # Note: MAP_WIDTH will be dynamic in MissionScene
         self.shared_data = {
             'player': Player(pygame.Rect(0, 0, 4000, 4000)),  
             'unlocked_missions': ["Extraction Illimitée", "Promenade Zen"],
@@ -36,7 +32,6 @@ class Game(SceneManager):
             'game_started': False
         }
         
-        # Enregistrement des scènes
         self.scenes = {
             'menu': MainMenu,
             'hub': HubScene,
@@ -45,7 +40,6 @@ class Game(SceneManager):
             'pause': PauseMenu(self)
         }
         
-        # Démarrage
         self.switch_to('menu')
         self._start_music()
 
@@ -66,11 +60,9 @@ class Game(SceneManager):
             while self.running:
                 self.clock.tick(FPS)
                 
-                # Gestion globale
                 if not self.handle_events():
                     self.running = False
                 
-                # Update & Draw scène active
                 super().run()
                 
                 pygame.display.flip()

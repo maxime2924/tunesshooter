@@ -5,7 +5,7 @@ from ui.dialogue import DialogueManager
 from core.asset_manager import AssetManager
 from core.camera import CameraGroup
 from entities.entity import Entity
-from entities.walls import Wall
+from entities.obstacles import Wall
 
 class BackstageScene(Scene):
     def __init__(self, manager):
@@ -80,7 +80,6 @@ class BackstageScene(Scene):
 
     def _add_wall(self, pos, size, color):
         w = Wall([self.camera_group, self.walls], pos, size, color=color, border_color=(150, 150, 150))
-        # self.collision_sprites.add(w) # Walls are handled separately usually, but lets add to collision sprites logic if generic
         pass
 
     def _setup_npcs(self):
@@ -198,7 +197,6 @@ class BackstageScene(Scene):
     def _start_node_dialogue(self, name, config, node_id):
         node = config["nodes"][node_id]
         
-        # Callback pour gérer la navigation dans l'arbre
         def callback(action_id):
             if action_id == "end":
                 self.dialogue_mgr.active = False

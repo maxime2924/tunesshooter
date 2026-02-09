@@ -11,11 +11,11 @@ class Zombie(Enemy):
         if img:
             self.image = pygame.transform.scale(img, (40, 40))
         else:
-            self.image.fill((50, 150, 50)) # Green fallback
+            self.image.fill((50, 150, 50))
         
-        self.speed = 2 # Plus lent
+        self.speed = 2
         self.rect = self.image.get_rect(center=self.rect.center)
-        self.hp = hp * 1.5 # Plus de vie (Tank)
+        self.hp = hp * 1.5
 
 class Robot(Enemy):
     def __init__(self, screen_rect, hp=3, damage=1):
@@ -25,8 +25,8 @@ class Robot(Enemy):
         if img:
             self.image = pygame.transform.scale(img, (30, 30))
         else:
-            self.image.fill((150, 150, 150)) # Grey fallback
+            self.image.fill((150, 150, 150))
             
-        self.speed = 4.5 # Rapide
+        self.speed = 4.5
         self.rect = self.image.get_rect(center=self.rect.center)
-        self.hp = hp * 0.8 # Moins de vie (Glass cannon)
+        self.hp = hp * 0.8

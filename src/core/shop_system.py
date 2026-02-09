@@ -28,22 +28,18 @@ class ShopItem:
 class Merchant:
     def __init__(self, x=0, y=0):
         self.items = [
-            # PASSIVE GOLD (Fixer Info)
             ShopItem("Serveur de Minage v1", 100, 1, "passive_gold", 1, "Génère 1 or/sec"),
             ShopItem("Ferme de Crypto", 500, 3, "passive_gold", 5, "Génère 5 or/sec"),
             ShopItem("Data Center Illegal", 2000, 7, "passive_gold", 20, "Génère 20 or/sec"),
             
-            # DAMAGE (Armurier)
             ShopItem("Puce d'Overclocking", 150, 2, "damage", 1, "+1 Dégât"),
             ShopItem("Condensateur Laser", 600, 5, "damage", 3, "+3 Dégâts"),
             ShopItem("Noyau de Fusion", 2500, 10, "damage", 10, "+10 Dégâts"),
             
-            # HP (Ingénieur Système)
             ShopItem("Nano-Réparateurs", 200, 2, "hp", 20, "+20 PV Max"),
             ShopItem("Bio-Armure Plastique", 800, 4, "hp", 50, "+50 PV Max"),
             ShopItem("Exosquelette Combat", 3000, 8, "hp", 150, "+150 PV Max"),
             
-            # SPEED (Garagiste)
             ShopItem("Propulseur Ionique", 300, 3, "speed", 1, "+1 Vitesse"),
             ShopItem("Turbo Compresseur", 900, 6, "speed", 2, "+2 Vitesse"),
             ShopItem("Moteur à Distorsion", 4000, 12, "speed", 5, "+5 Vitesse"),
@@ -51,11 +47,9 @@ class Merchant:
         self.font_title = pygame.font.SysFont(None, 40)
         self.font_text = pygame.font.SysFont(None, 24)
         
-        # Sprite representation for Hub
         self.image = pygame.Surface((40, 60))
         self.image.fill(GOLD_COLOR)
-        # On peut dessiner un petit bonhomme ou stand
-        pygame.draw.rect(self.image, (50, 50, 50), (0, 40, 40, 20)) # Base du stand
+        pygame.draw.rect(self.image, (50, 50, 50), (0, 40, 40, 20))
         self.rect = self.image.get_rect(topleft=(x, y))
 
 
@@ -67,7 +61,6 @@ class Merchant:
             player.banked_gold -= item.cost
             item.purchased_count += 1
             item.apply_effect(player)
-            # Inflation
             item.cost = int(item.cost * 1.3)
             return True, f"Acheté : {item.name}"
         else:
